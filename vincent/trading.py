@@ -1,5 +1,5 @@
-from data_management import BitfinexData
-from technical_analysis import *
+from vincent.data_management import BitfinexData
+from vincent.technical_analysis import *
 from threading import Thread
 import pandas as pd
 import logging
@@ -7,7 +7,6 @@ import time
 import sys
 import configparser
 from datetime import datetime, timedelta
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -23,7 +22,7 @@ class TradingBot():
         self.sar_res = {}
         self.volume_df = {}
 
-        self.tf_weights = {'5m': 15 , '15m': 35, '30m': 25, '1h': 25}
+        self.tf_weights = {'5m': 15, '15m': 35, '30m': 25, '1h': 25}
         self.sl_timeframe = '30m'
 
         if sum(self.tf_weights.values()) != 100:
@@ -81,10 +80,12 @@ class TradingBot():
                         else:
                             pct_pnl = round((pos['entry_price'] / pos['exit_price'] - 1) * 100, 2)
 
-                        report_string += pos['side'] + " " + pos['pair'] + " : Entry " + str(pos['size']) + "@" + str(pos['entry_price']) \
-                                      + " on " + pos['entry_time'].strftime('%d-%m-%Y %H:%M:%S') + " | " \
-                                      + " Closed @" + str(pos['exit_price']) + " on " + pos['exit_time'].strftime('%d-%m-%Y %H:%M:%S') \
-                                      + " ||| " + str(pct_pnl) + "%\n"
+                        report_string += pos['side'] + " " + pos['pair'] + " : Entry " + str(pos['size']) + "@" + str(
+                            pos['entry_price']) \
+                                         + " on " + pos['entry_time'].strftime('%d-%m-%Y %H:%M:%S') + " | " \
+                                         + " Closed @" + str(pos['exit_price']) + " on " + pos['exit_time'].strftime(
+                            '%d-%m-%Y %H:%M:%S') \
+                                         + " ||| " + str(pct_pnl) + "%\n"
 
                 f = open(self.file_name + ".txt", "w")
                 f.write(report_string)
@@ -97,11 +98,15 @@ class TradingBot():
                 pos = self.dataObject.positions[pos_temp]
                 if pos['status'] == "open":
                     if pos['side'] == "LONG":
-                        current_pnl_euro = pos['size'] * (self.dataObject.spreads[pos['pair']]['Bid'] - pos['entry_price'])
+                        current_pnl_euro = pos['size'] * (
+                                self.dataObject.spreads[pos['pair']]['Bid'] - pos['entry_price'])
                     else:
-                        current_pnl_euro = pos['size'] * (pos['entry_price'] - self.dataObject.spreads[pos['pair']]['Ask'])
-                    logger.info("Current position: %s %s %s@%s opened at %s | PNL: %s €", pos['side'], pos['pair'], pos['size'],
-                                pos['entry_price'], pos['entry_time'].strftime('%d-%m-%Y %H:%M:%S'), round(current_pnl_euro, 2))
+                        current_pnl_euro = pos['size'] * (
+                                pos['entry_price'] - self.dataObject.spreads[pos['pair']]['Ask'])
+                    logger.info("Current position: %s %s %s@%s opened at %s | PNL: %s €", pos['side'], pos['pair'],
+                                pos['size'],
+                                pos['entry_price'], pos['entry_time'].strftime('%d-%m-%Y %H:%M:%S'),
+                                round(current_pnl_euro, 2))
 
             if time.time() - 3600 > self.dataObject.last_volume_request:
                 self.update_daily_volume()
@@ -119,7 +124,8 @@ class TradingBot():
                         except Exception as e:
                             logger.error("Error while creating dataframe for %s: %s", pair.replace("/", ""), e)
                             break
-                        self.sar_res[pair.replace("/", "") + "_" + self.sl_timeframe] = sar(df) # Since we need it for stop loss
+                        self.sar_res[pair.replace("/", "") + "_" + self.sl_timeframe] = sar(
+                            df)  # Since we need it for stop loss
                         break
 
                 for ord_temp in self.dataObject.limit_orders:
@@ -167,12 +173,13 @@ class TradingBot():
 
                     current_avg_range = avg_range(df['high'].tolist(), df['low'].tolist(), 14)
                     if self.macd_res[pair + "_" + tf][1][-1]:
-                        current_signal_macd = self.macd_res[pair + "_" + tf][0][-1] - self.macd_res[pair + "_" + tf][1][-1]
+                        current_signal_macd = self.macd_res[pair + "_" + tf][0][-1] - self.macd_res[pair + "_" + tf][1][
+                            -1]
                     else:
                         current_signal_macd = 0
 
                     if current_avg_range != 0:
-                        if current_signal_macd  > 0 and (current_signal_macd / current_avg_range) * 100 > 0.5:
+                        if current_signal_macd > 0 and (current_signal_macd / current_avg_range) * 100 > 0.5:
                             long_points_macd += (current_signal_macd / current_avg_range) * self.tf_weights[tf]
                             total_points_macd += (current_signal_macd / current_avg_range) * self.tf_weights[tf]
                         elif current_signal_macd < 0 and abs(current_signal_macd / current_avg_range) * 100 > 0.5:
@@ -182,14 +189,15 @@ class TradingBot():
                     """ DEMA """
 
                     if self.dema_res_1[pair + "_" + tf][-1] > self.dema_res_2[pair + "_" + tf][-1] \
-                        and any(self.dema_res_1[pair + "_" + tf][-x] < self.dema_res_2[pair + "_" + tf][-x] for x in range(1, 4)):
+                            and any(self.dema_res_1[pair + "_" + tf][-x] < self.dema_res_2[pair + "_" + tf][-x] for x in
+                                    range(1, 4)):
                         long_points_dema += self.tf_weights[tf]
                         total_points_dema += self.tf_weights[tf]
                     elif self.dema_res_1[pair + "_" + tf][-1] < self.dema_res_2[pair + "_" + tf][-1] \
-                        and any(self.dema_res_1[pair + "_" + tf][-x] > self.dema_res_2[pair + "_" + tf][-x] for x in range(1, 4)):
+                            and any(self.dema_res_1[pair + "_" + tf][-x] > self.dema_res_2[pair + "_" + tf][-x] for x in
+                                    range(1, 4)):
                         short_points_dema += self.tf_weights[tf]
                         total_points_dema += self.tf_weights[tf]
-
 
                     """ ADX """
 
@@ -225,16 +233,18 @@ class TradingBot():
                 trade_trigger = None
 
                 if pair + '_1h' in self.volume_df:
-                    logger.info("%s LONG: MACD %s%% DEMA %s%% ADX %s%% SAR side %s", pair, '{:.1f}'.format(long_macd),
-                                '{:.1f}'.format(long_dema), '{:.1f}'.format(long_adx),
-                                round(self.sar_res[pair + '_' + self.sl_timeframe]['SAR'][-1], self.dataObject.amount_precision[pair]))
-                    logger.info("%s SHORT: MACD %s%% DEMA %s%% ADX %s%% SAR side %s", pair, '{:.1f}'.format(short_macd),
-                                '{:.1f}'.format(short_dema), '{:.1f}'.format(short_adx),
-                                round(self.sar_res[pair + '_' + self.sl_timeframe]['SAR'][-1], self.dataObject.amount_precision[pair]))
+                    # logger.info("%s LONG: MACD %s%% DEMA %s%% ADX %s%% SAR side %s", pair, '{:.1f}'.format(long_macd),
+                    #             '{:.1f}'.format(long_dema), '{:.1f}'.format(long_adx),
+                    #             round(self.sar_res[pair + '_' + self.sl_timeframe]['SAR'][-1], self.dataObject.amount_precision[pair]))
+                    # logger.info("%s SHORT: MACD %s%% DEMA %s%% ADX %s%% SAR side %s", pair, '{:.1f}'.format(short_macd),
+                    #             '{:.1f}'.format(short_dema), '{:.1f}'.format(short_adx),
+                    #             round(self.sar_res[pair + '_' + self.sl_timeframe]['SAR'][-1], self.dataObject.amount_precision[pair]))
                     if self.dataObject.volume_data[pair.replace("/", "")] > 50000:
-                        if long_macd > 50 and long_dema > 50 and long_adx > 50 and self.sar_res[pair + '_' + self.sl_timeframe]['direction'][-1] == 1:
+                        if long_macd > 50 and long_dema > 50 and long_adx > 50 and \
+                                self.sar_res[pair + '_' + self.sl_timeframe]['direction'][-1] == 1:
                             trade_trigger = "LONG"
-                        elif short_macd > 50 and short_dema > 50 and short_adx > 50 and self.sar_res[pair + '_' + self.sl_timeframe]['direction'][-1] == -1:
+                        elif short_macd > 50 and short_dema > 50 and short_adx > 50 and \
+                                self.sar_res[pair + '_' + self.sl_timeframe]['direction'][-1] == -1:
                             trade_trigger = "SHORT"
 
                 if pair not in self.dataObject.local_db:
@@ -245,7 +255,8 @@ class TradingBot():
                 if len(self.dataObject.local_db[pair]['15m']) < 2:
                     continue
 
-                recent_var = (self.dataObject.local_db[pair]['15m'][-1]['close'] / self.dataObject.local_db[pair]['15m'][-2]['low'] - 1) * 100
+                recent_var = (self.dataObject.local_db[pair]['15m'][-1]['close'] /
+                              self.dataObject.local_db[pair]['15m'][-2]['low'] - 1) * 100
                 if abs(recent_var) >= 4:
                     continue
 
@@ -255,16 +266,21 @@ class TradingBot():
 
                     if trade_trigger == "LONG":
                         bitfinex_pair = pair.replace("EUR", "") + "/EUR"
-                        trade_size = round(self.trade_size / self.dataObject.spreads[pair]['Ask'], self.dataObject.amount_precision[pair])
-                        logger.warning("Limit buy order %s %s at %s, current ask %s", trade_size, pair.replace("EUR", ""),
+                        trade_size = round(self.trade_size / self.dataObject.spreads[pair]['Ask'],
+                                           self.dataObject.amount_precision[pair])
+                        logger.warning("Limit buy order %s %s at %s, current ask %s", trade_size,
+                                       pair.replace("EUR", ""),
                                        self.dataObject.spreads[pair]['Ask'] * (1 - self.limit_level),
                                        self.dataObject.spreads[pair]['Ask'])
                         limit_price = self.dataObject.spreads[pair]['Ask'] * (1 - self.limit_level)
 
                         if self.trading_type == "DEMO":
-                            new_order = {"pair": pair, "side": trade_trigger, "entry_price": self.dataObject.spreads[pair]['Ask'],
-                                            "status": "open", "exit_price": None, "size": trade_size, "entry_time": datetime.now(),
-                                            "exit_time": None, 'orderId': str(orderId)}
+                            new_order = {"pair": pair, "side": trade_trigger,
+                                         "entry_price": self.dataObject.spreads[pair]['Ask'],
+                                         "status": "open", "exit_price": None, "size": trade_size,
+                                         "entry_time": datetime.now(),
+                                         "exit_time": None, 'orderId': str(orderId)}
+                            # Database insert query can be added here
                             self.dataObject.limit_orders[orderId] = new_order
                         else:
                             try:
@@ -275,21 +291,27 @@ class TradingBot():
 
                     elif trade_trigger == "SHORT":
                         bitfinex_pair = pair.replace("EUR", "") + "/EUR"
-                        trade_size = round(self.trade_size / self.dataObject.spreads[pair]['Bid'], self.dataObject.amount_precision[pair])
-                        logger.warning("Limit sell order %s %s at %s, current bid %s", trade_size, pair.replace("EUR", ""),
+                        trade_size = round(self.trade_size / self.dataObject.spreads[pair]['Bid'],
+                                           self.dataObject.amount_precision[pair])
+                        logger.warning("Limit sell order %s %s at %s, current bid %s", trade_size,
+                                       pair.replace("EUR", ""),
                                        self.dataObject.spreads[pair]['Bid'] * (1 + self.limit_level),
                                        self.dataObject.spreads[pair]['Bid'])
                         limit_price = self.dataObject.spreads[pair]['Bid'] * (1 + self.limit_level)
 
                         if self.trading_type == "DEMO":
-                            new_order = {"pair": pair, "side": trade_trigger, "entry_price": self.dataObject.spreads[pair]['Bid'],
-                                            "status": "open", "exit_price": None, "size": trade_size, "entry_time": datetime.now(),
-                                            "exit_time": None, 'orderId': str(orderId)}
+                            new_order = {"pair": pair, "side": trade_trigger,
+                                         "entry_price": self.dataObject.spreads[pair]['Bid'],
+                                         "status": "open", "exit_price": None, "size": trade_size,
+                                         "entry_time": datetime.now(),
+                                         "exit_time": None, 'orderId': str(orderId)}
+
+                            # Database insert query can be added here
                             self.dataObject.limit_orders[orderId] = new_order
                         else:
                             try:
                                 self.dataObject.wss.new_order(cid=orderId, type='LIMIT', symbol='t' + pair,
-                                                               price=str(limit_price), amount=str(-trade_size))
+                                                              price=str(limit_price), amount=str(-trade_size))
                             except Exception as e:
                                 logger.warning("Failed to enter short position for %s: %s", pair, e)
 
@@ -302,13 +324,15 @@ class TradingBot():
 
         for order_key in self.dataObject.limit_orders:
 
+            # Incase of the database make a get query here
             order = self.dataObject.limit_orders[order_key]
 
             if order['status'] == 'open':
 
                 logger.info('Current limit order: %s', order)
 
-                if datetime.now() - timedelta(minutes=self.cancel_after) >= order['entry_time'] and order['status'] == 'open':
+                if datetime.now() - timedelta(minutes=self.cancel_after) >= order['entry_time'] and order[
+                    'status'] == 'open':
                     logger.info("Cancelling limit order for %s %s (still no entry after %s minutes", order['side'],
                                 order['pair'], self.cancel_after)
 
@@ -324,7 +348,8 @@ class TradingBot():
                 if self.trading_type != 'DEMO':
                     continue
 
-                if order['side'] == 'LONG' and spreads[order['pair']]['Ask'] <= order['entry_price'] * (1 - self.limit_level):
+                if order['side'] == 'LONG' and spreads[order['pair']]['Ask'] <= order['entry_price'] * (
+                        1 - self.limit_level):
                     new_position = {"pair": order['pair'],
                                     "side": order['side'],
                                     "entry_price": spreads[order['pair']]['Ask'],
@@ -340,7 +365,8 @@ class TradingBot():
                     self.dataObject.positions[order['orderId']] = new_position
                     order['status'] = 'filled'
 
-                elif order['side'] == 'SHORT' and spreads[order['pair']]['Bid'] >= order['entry_price'] * (1 + self.limit_level):
+                elif order['side'] == 'SHORT' and spreads[order['pair']]['Bid'] >= order['entry_price'] * (
+                        1 + self.limit_level):
                     new_position = {"pair": order['pair'],
                                     "side": order['side'],
                                     "entry_price": self.dataObject.spreads[order['pair']]['Bid'],
@@ -353,6 +379,7 @@ class TradingBot():
                                     'sl': spreads[order['pair']]['Bid'] * (1 + self.stop_loss),
                                     'critical_point': spreads[order['pair']]['Bid'] * (1 + self.critical_level)
                                     }
+
                     self.dataObject.positions[order['orderId']] = new_position
                     order['status'] = 'filled'
 
@@ -383,7 +410,7 @@ class TradingBot():
                             orderId = int(time.time() * 1000)
                             try:
                                 self.dataObject.wss.new_order(cid=orderId, type='MARKET', symbol='t' + pair,
-                                                           amount=str(-pos['size']))
+                                                              amount=str(-pos['size']))
                             except Exception as e:
                                 logger.error("Error while closing long position: %s", e)
                                 continue
@@ -394,7 +421,7 @@ class TradingBot():
                 if pos['side'] == "SHORT":
                     if spreads[pair]['Ask'] >= pos['critical_point']:
                         pos['tp'] = pos['entry_price'] * (1 + self.critical_exit)
-                        
+
                     if spreads[pair]['Ask'] <= pos['tp']:
                         pos['sl'] = pos['tp'] * (1 + self.trailing_sl)
                         pos['tp'] = pos['tp'] * (1 - self.trailing_sl)
@@ -408,18 +435,10 @@ class TradingBot():
                             orderId = int(time.time() * 1000)
                             try:
                                 self.dataObject.wss.new_order(cid=orderId, type='MARKET', symbol='t' + pair,
-                                                          amount=str(pos['size']))
+                                                              amount=str(pos['size']))
                             except Exception as e:
                                 logger.error("Error while closing short position: %s", e)
                                 continue
                             pos['exit_price'] = spreads[pair]['Ask']
                             pos['exit_time'] = datetime.now()
                             pos['status'] = 'closed'
-
-
-if __name__ == '__main__':
-    data_collector = BitfinexData()
-    trading_bot = TradingBot(data_collector)
-
-    while True:
-        pass

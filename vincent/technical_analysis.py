@@ -23,7 +23,7 @@ def macd(data, short_tf, long_tf, signal_tf):
             ema_short.append(0)
             continue
         elif i == long_tf:
-            ema_short.append(sum(data[i-short_tf:i]) / short_tf)
+            ema_short.append(sum(data[i - short_tf:i]) / short_tf)
             continue
 
         new_ema = (data[i] - ema_short[-1]) * multiplier_short + ema_short[-1]
@@ -63,6 +63,7 @@ def macd(data, short_tf, long_tf, signal_tf):
 
     return macd_line, ema_signal
 
+
 def dema(data, tf):
     multiplier_short = 2 / (tf + 1)
 
@@ -75,7 +76,7 @@ def dema(data, tf):
             ema.append(0)
             continue
         elif i == tf:
-            ema.append(sum(data[i-tf:i]) / tf)
+            ema.append(sum(data[i - tf:i]) / tf)
             continue
 
         new_ema = (data[i] - ema[-1]) * multiplier_short + ema[-1]
@@ -90,7 +91,7 @@ def dema(data, tf):
             ema_2.append(0)
             continue
         elif i == tf:
-            ema_2.append(sum(ema[i-tf:i]) / tf)
+            ema_2.append(sum(ema[i - tf:i]) / tf)
             continue
 
         new_ema_2 = (ema[i] - ema_2[-1]) * multiplier_short + ema_2[-1]
@@ -109,6 +110,7 @@ def dema(data, tf):
         dema.append(new_dema)
 
     return dema
+
 
 def adx(data_high, data_low, tf):
     plus_di = [0]
@@ -203,6 +205,7 @@ def adx(data_high, data_low, tf):
 
     return adx_curve, minus_di_tf, plus_di_tf
 
+
 def atr(data_high, data_low, tf):
     atr_curve = []
 
@@ -224,8 +227,8 @@ def atr(data_high, data_low, tf):
 
     return atr_curve
 
-def sar(data):
 
+def sar(data):
     data_high = data['high'].tolist()
     data_low = data['low'].tolist()
     mts_data = data['mts'].tolist()
@@ -389,12 +392,7 @@ def sar(data):
     return df_temp
 
 
-
-
-
-
 def sar2(data):
-
     data_high = data['high'].tolist()
     data_low = data['low'].tolist()
     mts_data = data['mts'].tolist()
@@ -475,13 +473,3 @@ def sar2(data):
     df_temp = df_temp.set_index(['mts'])
 
     return df_temp
-
-
-
-
-
-
-
-
-
-

@@ -339,10 +339,14 @@ class BitfinexData(sqliteDB):
                                         'critical_point': order['entry_price'] * (1 + self.critical_level)
                                         }
 
-                    self.positions[data[1][0][0]] = new_position
+                    # Insert query to the database and add a new position
+                    # When a new order was placed
+                    order_id = data[1][0][0]
+                    self.positions[order_id] = new_position
 
                 else:
-                    self.positions[data[1][0][0]]['size'] = abs(data[1][0][7])
+                    order_id = data[1][0][0]
+                    self.positions[order_id]['size'] = abs(data[1][0][7])
 
                 if data[0] == 'oc':
                     order['status'] = 'filled'
